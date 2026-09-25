@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"math/big"
 	"net"
 	"net/http"
@@ -477,7 +476,7 @@ func (t *TransportHTTP) parseBeatAndData(ctx *gin.Context) (string, string, []by
 	}
 
 	// Decrypt beat with ChaCha20-Poly1305
-	agentInfo, err := t.Crypto.DecryptChaCha20Poly1305(beatBytes)
+	agentInfo, err = t.Crypto.DecryptChaCha20Poly1305(beatBytes)
 	if err != nil {
 		// Fallback to RC4 for backward compatibility with old agents
 		agentInfo, err = t.decryptRC4Legacy(beatBytes)
@@ -494,7 +493,7 @@ func (t *TransportHTTP) parseBeatAndData(ctx *gin.Context) (string, string, []by
 	agentType = uint(binary.BigEndian.Uint32(agentInfo[:4]))
 	agentId = uint(binary.BigEndian.Uint32(agentInfo[4:8]))
 
-	beat = agentInfo[8:] // Remaining beat data
+	beat = string(agentInfo[8:]) // Remaining beat data
 
 	// Read body data
 	bodyData, err = io.ReadAll(ctx.Request.Body)
@@ -511,7 +510,7 @@ func (t *TransportHTTP) parseBeatAndData(ctx *gin.Context) (string, string, []by
 		// If decode fails, use raw body
 	}
 
-	return fmt.Sprintf("%08x", agentType), fmt.Sprintf("%08x", agentId), beat, bodyData, nil
+	return fmt.Sprintf("%08x", agentType), fmt.Sprintf("%08x", agentId), []byte(beat), bodyData, nil
 }
 
 // decryptRC4Legacy provides backward compatibility with RC4-encrypted payloads

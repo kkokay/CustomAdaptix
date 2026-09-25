@@ -5,15 +5,16 @@
 #include "Connector.h"
 #include "Crypt_ChaCha20.h"
 
-#ifndef PROFILE_STRUCT
-#define PROFILE_STRUCT
+// Encryption method constants
+#define ENC_RC4             0
+#define ENC_CHACHA20        1
 
 #define PROXY_TYPE_NONE     0
 #define PROXY_TYPE_HTTP     1
 #define PROXY_TYPE_HTTPS    2
 
-#define ENC_RC4             0
-#define ENC_CHACHA20        1
+#ifndef PROFILE_STRUCT
+#define PROFILE_STRUCT
 
 typedef struct {
 	ULONG  servers_count;

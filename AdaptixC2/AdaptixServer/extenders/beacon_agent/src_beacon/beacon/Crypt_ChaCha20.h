@@ -98,6 +98,25 @@ void ChaCha20_Crypt(ChaCha20_Context *ctx, uint8_t *data, uint32_t len);
 void ChaCha20_Zero(volatile void *ptr, size_t len);
 
 // ============================================================================
+// BEACON AGENT WRAPPER FUNCTIONS
+// ============================================================================
+
+// Simple wrappers for beacon agent compatibility
+inline void EncryptChaCha20(uint8_t *plainData, uint32_t plainSize, uint8_t *key, uint8_t *nonce) {
+    ChaCha20_Context ctx;
+    ChaCha20_Init(&ctx, key, nonce, CHACHA20_MODE_IETF);
+    ChaCha20_Encrypt(&ctx, plainData, plainSize, plainData);
+    ChaCha20_Zero(&ctx, sizeof(ctx));
+}
+
+inline void DecryptChaCha20(uint8_t *cipherData, uint32_t cipherSize, uint8_t *key, uint8_t *nonce) {
+    ChaCha20_Context ctx;
+    ChaCha20_Init(&ctx, key, nonce, CHACHA20_MODE_IETF);
+    ChaCha20_Decrypt(&ctx, cipherData, cipherSize, cipherData);
+    ChaCha20_Zero(&ctx, sizeof(ctx));
+}
+
+// ============================================================================
 // CONSTANTS
 // ============================================================================
 
@@ -135,5 +154,3 @@ void ChaCha20_Zero(volatile void *ptr, size_t len);
 //
 //   // Clean up
 //   ChaCha20_Zero(&ctx, sizeof(ctx));
-
-#endif // CRYPT_CHACHA20_H
