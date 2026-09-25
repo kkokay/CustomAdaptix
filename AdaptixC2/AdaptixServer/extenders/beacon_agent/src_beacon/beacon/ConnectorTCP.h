@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include "Connector.h"
+#include "Crypt_ChaCha20.h"
 
 #ifndef PROFILE_STRUCT
 #define PROFILE_STRUCT

@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <wininet.h>
 #include "Connector.h"
+#include "Crypt_ChaCha20.h"
 
 #define DECL_API(x) decltype(x) * x
 

