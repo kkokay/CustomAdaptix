@@ -1,166 +1,85 @@
-/// Beacon Advanced listener (ChaCha20 AEAD + OPSEC)
+/// BeaconAdvanced - ChaCha20-Poly1305 with HMAC-SHA256 Authentication
 
-function ListenerUI(mode_create)
-{
-    // MAIN SETTING
-    let labelHost = form.create_label("Host & port (Bind):");
-    let comboHostBind = form.create_combo();
-    comboHostBind.setEnabled(mode_create)
-    comboHostBind.clear();
-    let addrs = ax.interfaces();
-    for (let item of addrs) { comboHostBind.addItem(item); }
-    let spinPortBind = form.create_spin();
-    spinPortBind.setRange(1, 65535);
-    spinPortBind.setValue(443);
-    spinPortBind.setEnabled(mode_create)
+function ListenerUI(mode_create) {
+    let labelHost = form.create_label("Host & port:");
+    let comboHost = form.create_combo();
+    comboHost.setEnabled(mode_create);
+    for (let addr of ax.interfaces()) { comboHost.addItem(addr); }
+
+    let spinPort = form.create_spin();
+    spinPort.setRange(1, 65535);
+    spinPort.setValue(443);
+    spinPort.setEnabled(mode_create);
 
     let labelCallback = form.create_label("Callback addresses:");
     let textCallback = form.create_list();
     textCallback.setButtonsEnabled(true);
     textCallback.addItem("address:port");
 
-    let labelMethod = form.create_label("Method:");
+    let labelKey = form.create_label("Encryption key (ChaCha20-256bit):");
+    let textKey = form.create_textline(ax.random_string(64, "hex"));
+    textKey.setEnabled(mode_create);
+
+    let labelMethod = form.create_label("HTTP Method:");
     let comboMethod = form.create_combo();
     comboMethod.addItems(["POST", "GET"]);
-    comboMethod.setEnabled(mode_create)
 
-    let labelUri = form.create_label("URIs:");
-    let textUri = form.create_list();
-    textUri.setButtonsEnabled(true);
-    textUri.addItems(["/api/v1/status", "/updates/check.php", "/content.html"]);
+    let labelURI = form.create_label("URIs:");
+    let textURI = form.create_list();
+    textURI.setButtonsEnabled(true);
+    textURI.addItem("/api/v1/data");
 
-    let labelUserAgent = form.create_label("User-Agents:");
-    let textUserAgent = form.create_list();
-    textUserAgent.setButtonsEnabled(true);
-    textUserAgent.addItem("Mozilla/5.0 (Windows NT 6.2; rv:20.0) Gecko/20121202 Firefox/20.0");
+    let labelUA = form.create_label("User-Agents:");
+    let textUA = form.create_list();
+    textUA.setButtonsEnabled(true);
+    textUA.addItem("Mozilla/5.0");
 
-    let labelHB = form.create_label("Heartbeat Header:");
-    let textlineHB = form.create_textline("X-Beacon-Id");
+    let spinJitter = form.create_spin();
+    spinJitter.setRange(0, 10000);
+    spinJitter.setValue(0);
 
-    let labelEncryptKey = form.create_label("Encryption key (ChaCha20-Poly1305):");
-    let textlineEncryptKey = form.create_textline(ax.random_string(64, "hex"));
-    textlineEncryptKey.setEnabled(mode_create)
-    let buttonEncryptKey = form.create_button("Generate");
-    buttonEncryptKey.setEnabled(mode_create)
+    let spinPadMin = form.create_spin();
+    spinPadMin.setRange(0, 1000);
+    spinPadMin.setValue(0);
 
-    let certSelector = form.create_selector_file();
-    certSelector.setPlaceholder("SSL Certificate (optional, auto-generate if empty)");
-    let keySelector = form.create_selector_file();
-    keySelector.setPlaceholder("SSL Key (optional, auto-generate if empty)");
-    let layout_group = form.create_vlayout();
-    layout_group.addWidget(certSelector);
-    layout_group.addWidget(keySelector);
-    let panel_group = form.create_panel();
-    panel_group.setLayout(layout_group);
-    let ssl_group = form.create_groupbox("Use SSL (HTTPS)", true)
-    ssl_group.setPanel(panel_group);
-    ssl_group.setChecked(false);
-
-    form.connect(buttonEncryptKey, "clicked", function() { textlineEncryptKey.setText( ax.random_string(64, "hex") ); });
-
-    let layoutMain = form.create_gridlayout();
-    layoutMain.addWidget(labelHost,          0, 0, 1, 1);
-    layoutMain.addWidget(comboHostBind,      0, 1, 1, 1);
-    layoutMain.addWidget(spinPortBind,       0, 2, 1, 1);
-    layoutMain.addWidget(labelCallback,      1, 0, 1, 1);
-    layoutMain.addWidget(textCallback,       1, 1, 1, 2);
-    layoutMain.addWidget(labelMethod,        2, 0, 1, 1);
-    layoutMain.addWidget(comboMethod,        2, 1, 1, 2);
-    layoutMain.addWidget(labelUri,           3, 0, 1, 1);
-    layoutMain.addWidget(textUri,            3, 1, 1, 2);
-    layoutMain.addWidget(labelUserAgent,     4, 0, 1, 1);
-    layoutMain.addWidget(textUserAgent,      4, 1, 1, 2);
-    layoutMain.addWidget(labelHB,            5, 0, 1, 1);
-    layoutMain.addWidget(textlineHB,         5, 1, 1, 2);
-    layoutMain.addWidget(labelEncryptKey,    6, 0, 1, 1);
-    layoutMain.addWidget(textlineEncryptKey, 6, 1, 1, 1);
-    layoutMain.addWidget(buttonEncryptKey,   6, 2, 1, 1);
-    layoutMain.addWidget(ssl_group,          7, 0, 1, 3);
-
-    let panelMain = form.create_panel();
-    panelMain.setLayout(layoutMain);
-
-
-    // HTTP HEADERS
-    let checkTrust = form.create_check("Trust X-Forwarded-For");
-
-    let labelHostHeader = form.create_label("Host Headers:");
-    let textHostHeader = form.create_list();
-    textHostHeader.setButtonsEnabled(true);
-
-    let labelRequestHeaders = form.create_label("Request Headers:");
-    let textRequestHeaders = form.create_textmulti();
-
-    let labelServerHeaders = form.create_label("Server Headers:");
-    let textServerHeaders = form.create_textmulti();
-    textServerHeaders.setEnabled(mode_create)
-
-    let layoutHeaders = form.create_gridlayout();
-    layoutHeaders.addWidget(checkTrust,          0, 0, 1, 2);
-    layoutHeaders.addWidget(labelHostHeader,     1, 0, 1, 1);
-    layoutHeaders.addWidget(textHostHeader,      1, 1, 1, 1);
-    layoutHeaders.addWidget(labelRequestHeaders, 2, 0, 1, 1);
-    layoutHeaders.addWidget(textRequestHeaders,  2, 1, 1, 1);
-    layoutHeaders.addWidget(labelServerHeaders,  3, 0, 1, 1);
-    layoutHeaders.addWidget(textServerHeaders,   3, 1, 1, 1);
-
-    let panelHeaders = form.create_panel();
-    panelHeaders.setLayout(layoutHeaders);
-
-    // ERROR PAGE
-    let textError = form.create_textmulti("<!DOCTYPE html>\n<html>\n<head>\n<title>ERROR 404 - Nothing Found</title>\n</head>\n<body>\n<h1 class=\"cover-heading\">ERROR 404 - PAGE NOT FOUND</h1>\n</div>\n</div>\n</div>\n</body>\n</html>");
-
-    let layoutError = form.create_gridlayout();
-    layoutError.addWidget(textError, 0, 0, 1, 1);
-
-    let panelError = form.create_panel();
-    panelError.setLayout(layoutError);
-
-    // PAYLOAD
-    let textPayload = form.create_textmulti("{\"status\": \"ok\", \"data\": \"<<<PAYLOAD_DATA>>>\", \"metrics\": \"sync\"}");
-
-    let layoutPayload = form.create_gridlayout();
-    layoutPayload.addWidget(textPayload, 0, 0, 1, 1);
-
-    let panelPayload = form.create_panel();
-    panelPayload.setLayout(layoutPayload);
-
-    //
-    let tabs = form.create_tabs();
-    tabs.addTab(panelMain, "Main settings");
-    tabs.addTab(panelHeaders, "HTTP Headers");
-    tabs.addTab(panelError, "Page Error");
-    tabs.addTab(panelPayload, "Page Payload");
-
-    let layout = form.create_hlayout();
-    layout.addWidget(tabs);
+    let spinPadMax = form.create_spin();
+    spinPadMax.setRange(0, 5000);
+    spinPadMax.setValue(0);
 
     let container = form.create_container();
-    container.put("host_bind",          comboHostBind);
-    container.put("port_bind",          spinPortBind);
+    container.put("host_bind", comboHost);
+    container.put("port_bind", spinPort);
     container.put("callback_addresses", textCallback);
-    container.put("http_method",        comboMethod);
-    container.put("uri",                textUri);
-    container.put("user_agent",         textUserAgent);
-    container.put("hb_header",          textlineHB);
-    container.put("encrypt_key",        textlineEncryptKey);
-    container.put("ssl",                ssl_group);
-    container.put("ssl_cert",           certSelector);
-    container.put("ssl_key",            keySelector);
-    container.put("x-forwarded-for",    checkTrust);
-    container.put("host_header",        textHostHeader);
-    container.put("request_headers",    textRequestHeaders);
-    container.put("server_headers",     textServerHeaders);
-    container.put("page-error",         textError);
-    container.put("page-payload",       textPayload);
+    container.put("encrypt_key", textKey);
+    container.put("http_method", comboMethod);
+    container.put("uris", textURI);
+    container.put("user_agents", textUA);
+    container.put("jitter_ms", spinJitter);
+    container.put("padding_min", spinPadMin);
+    container.put("padding_max", spinPadMax);
 
     let panel = form.create_panel();
+    let layout = form.create_gridlayout();
+    layout.addWidget(labelHost, 0, 0);
+    layout.addWidget(comboHost, 0, 1);
+    layout.addWidget(spinPort, 0, 2);
+    layout.addWidget(labelCallback, 1, 0);
+    layout.addWidget(textCallback, 1, 1);
+    layout.addWidget(labelKey, 2, 0);
+    layout.addWidget(textKey, 2, 1);
+    layout.addWidget(labelMethod, 3, 0);
+    layout.addWidget(comboMethod, 3, 1);
+    layout.addWidget(labelURI, 4, 0);
+    layout.addWidget(textURI, 4, 1);
+    layout.addWidget(labelUA, 5, 0);
+    layout.addWidget(textUA, 5, 1);
+
     panel.setLayout(layout);
 
     return {
         ui_panel: panel,
         ui_container: container,
-        ui_height: 750,
-        ui_width: 750
-    }
+        ui_height: 400,
+        ui_width: 600
+    };
 }
