@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"crypto/rc4"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -145,9 +144,10 @@ func validConfig(config string) error {
 		return errors.New("user_agent is required")
 	}
 
-	match, _ := regexp.MatchString("^[0-9a-f]{32}$", conf.EncryptKey)
-	if len(conf.EncryptKey) != 32 || !match {
-		return errors.New("encrypt_key must be 32 hex characters")
+	// ChaCha20-Poly1305 requires 256-bit key (64 hex characters)
+	match, _ := regexp.MatchString("^[0-9a-f]{64}$", conf.EncryptKey)
+	if len(conf.EncryptKey) != 64 || !match {
+		return errors.New("encrypt_key must be 64 hex characters (256-bit for ChaCha20-Poly1305)")
 	}
 
 	if !strings.Contains(conf.WebPageOutput, "<<<PAYLOAD_DATA>>>") {
@@ -415,14 +415,14 @@ func (t *TransportHTTP) parseBeatAndData(ctx *gin.Context) (string, string, []by
 
 	encKey, err := hex.DecodeString(t.Config.EncryptKey)
 	if err != nil {
-		return "", "", nil, nil, errors.New("failed decrypt beat")
+		return "", "", nil, nil, errors.New("failed to decode encryption key")
 	}
-	rc4crypt, errcrypt := rc4.NewCipher(encKey)
-	if errcrypt != nil {
-		return "", "", nil, nil, errors.New("rc4 decrypt error")
+
+	// Decrypt using ChaCha20-Poly1305 (RFC 7539)
+	agentInfo, err = DecryptChaCha20Poly1305(encKey, agentInfoCrypt)
+	if err != nil {
+		return "", "", nil, nil, fmt.Errorf("chacha20poly1305 decrypt error: %v", err)
 	}
-	agentInfo = make([]byte, len(agentInfoCrypt))
-	rc4crypt.XORKeyStream(agentInfo, agentInfoCrypt)
 
 	agentType = uint(binary.BigEndian.Uint32(agentInfo[:4]))
 	agentInfo = agentInfo[4:]
