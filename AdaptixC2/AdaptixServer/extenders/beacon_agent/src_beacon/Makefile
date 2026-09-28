@@ -152,6 +152,31 @@ $(DNS_DIST_DIR)/%.x64.o: beacon/%.cpp
 $(DNS_DIST_DIR)/%.x86.o: beacon/%.cpp
 	@$(CXX_X86) -c $(COMMON_FLAGS) -D BEACON_DNS -c $< -o $@
 
+# ChaCha20: compile for ALL beacon types (required for encryption)
+$(HTTP_DIST_DIR)/Crypt_ChaCha20.x64.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X64) -c $(COMMON_FLAGS) -D BEACON_HTTP -c $< -o $@
+
+$(HTTP_DIST_DIR)/Crypt_ChaCha20.x86.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X86) -c $(COMMON_FLAGS) -D BEACON_HTTP -c $< -o $@
+
+$(SMB_DIST_DIR)/Crypt_ChaCha20.x64.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X64) -c $(COMMON_FLAGS) -D BEACON_SMB -c $< -o $@
+
+$(SMB_DIST_DIR)/Crypt_ChaCha20.x86.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X86) -c $(COMMON_FLAGS) -D BEACON_SMB -c $< -o $@
+
+$(TCP_DIST_DIR)/Crypt_ChaCha20.x64.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X64) -c $(COMMON_FLAGS) -D BEACON_TCP -c $< -o $@
+
+$(TCP_DIST_DIR)/Crypt_ChaCha20.x86.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X86) -c $(COMMON_FLAGS) -D BEACON_TCP -c $< -o $@
+
+$(DNS_DIST_DIR)/Crypt_ChaCha20.x64.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X64) -c $(COMMON_FLAGS) -D BEACON_DNS -c $< -o $@
+
+$(DNS_DIST_DIR)/Crypt_ChaCha20.x86.o: beacon/Crypt_ChaCha20.cpp
+	@$(CXX_X86) -c $(COMMON_FLAGS) -D BEACON_DNS -c $< -o $@
+
 # Miniz: compile with trim macros for ALL beacon types to eliminate CRT deps
 $(HTTP_DIST_DIR)/miniz.x64.o: beacon/miniz.cpp
 	@$(CXX_X64) -c $(COMMON_FLAGS) -D BEACON_HTTP $(MINIZ_TRIM_FLAGS) -c $< -o $@
