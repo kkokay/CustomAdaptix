@@ -146,7 +146,7 @@ func validConfig(config string) error {
 	}
 
 	if conf.ParameterName == "" {
-		return errors.New("hb_parameter is required")
+		conf.ParameterName = "X-Beacon-Id" // Default heartbeat header
 	}
 
 	if len(conf.UserAgent) == 0 {
