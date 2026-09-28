@@ -57,7 +57,7 @@ type TransportConfig struct {
 	// Agent communication
 	HttpMethod     string   `json:"http_method"`
 	Uri            []string `json:"uri"`
-	ParameterName  string   `json:"hb_parameter"` // Can be header, query param, or body field
+	ParameterName  string   `json:"hb_header"` // Can be header, query param, or body field
 	UserAgent      []string `json:"user_agent"`
 	HostHeader     []string `json:"host_header"`
 	RequestHeaders string   `json:"request_headers"`
@@ -68,9 +68,9 @@ type TransportConfig struct {
 
 	// Server response
 	ResponseHeaders    map[string]string `json:"response_headers"`
-	TrustXForwardedFor bool              `json:"x_forwarded_for"`
-	WebPageError       string            `json:"page_error"`
-	WebPageOutput      string            `json:"page_payload"`
+	TrustXForwardedFor bool              `json:"x-forwarded-for"`
+	WebPageError       string            `json:"page-error"`
+	WebPageOutput      string            `json:"page-payload"`
 
 	// OPSEC - Randomization
 	EnableJitter     bool `json:"enable_jitter"`      // Random delays
@@ -164,8 +164,14 @@ func validConfig(config string) error {
 		return errors.New("encrypt_key must contain only hex characters")
 	}
 
+	// Set default page_payload if empty
+	if conf.WebPageOutput == "" {
+		conf.WebPageOutput = "<html><body><script>var payload='<<<PAYLOAD_DATA>>>';</script></body></html>"
+	}
+
+	// Validate that page_payload contains template (if provided)
 	if !strings.Contains(conf.WebPageOutput, "<<<PAYLOAD_DATA>>>") {
-		return errors.New("page_payload must contain '<<<PAYLOAD_DATA>>>' template")
+		return errors.New("page-payload must contain '<<<PAYLOAD_DATA>>>' template")
 	}
 
 	// OPSEC validation
