@@ -153,6 +153,11 @@ func validConfig(config string) error {
 		return errors.New("user_agent is required")
 	}
 
+	// Set default encryption key if empty (allow UI to not require it)
+	if conf.EncryptKey == "" {
+		conf.EncryptKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" // Default 64 hex chars
+	}
+
 	// Validate encryption key - support both 32 (hex) and 64 (hex pairs)
 	keyLen := len(conf.EncryptKey)
 	if keyLen != 32 && keyLen != 64 {
