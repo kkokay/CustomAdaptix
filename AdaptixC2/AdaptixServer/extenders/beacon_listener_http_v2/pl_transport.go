@@ -73,12 +73,12 @@ type TransportConfig struct {
 	WebPageOutput      string            `json:"page_payload"`
 
 	// OPSEC - Randomization
-	EnableJitter     bool   `json:"enable_jitter"`      // Random delays
-	JitterMinMs      int    `json:"jitter_min_ms"`      // Min delay in ms
-	JitterMaxMs      int    `json:"jitter_max_ms"`      // Max delay in ms
-	EnableHeaderMask bool   `json:"enable_header_mask"` // Randomize header order
-	PayloadSizeMin   int    `json:"payload_size_min"`   // Min padding bytes
-	PayloadSizeMax   int    `json:"payload_size_max"`   // Max padding bytes
+	EnableJitter     bool `json:"enable_jitter"`      // Random delays
+	JitterMinMs      int  `json:"jitter_min_ms"`      // Min delay in ms
+	JitterMaxMs      int  `json:"jitter_max_ms"`      // Max delay in ms
+	EnableHeaderMask bool `json:"enable_header_mask"` // Randomize header order
+	PayloadSizeMin   int  `json:"payload_size_min"`   // Min padding bytes
+	PayloadSizeMax   int  `json:"payload_size_max"`   // Max padding bytes
 
 	Server_headers string `json:"server_headers"`
 	Protocol       string `json:"protocol"`
@@ -475,13 +475,15 @@ func (t *TransportHTTP) parseBeatAndData(ctx *gin.Context) (string, string, []by
 		}
 	}
 
-	// Decrypt beat with ChaCha20-Poly1305
+	// Decrypt beat based on configured method or auto-detect
+	// Try ChaCha20 first (supports auto-fallback to RC4 for backward compat)
 	agentInfo, err = t.Crypto.DecryptChaCha20Poly1305(beatBytes)
 	if err != nil {
 		// Fallback to RC4 for backward compatibility with old agents
+		// This supports mixed environments (some agents on RC4, others on ChaCha20)
 		agentInfo, err = t.decryptRC4Legacy(beatBytes)
 		if err != nil {
-			return "", "", nil, nil, fmt.Errorf("failed to decrypt beat: %v", err)
+			return "", "", nil, nil, fmt.Errorf("failed to decrypt beat: %v (tried both ChaCha20 and RC4)", err)
 		}
 	}
 

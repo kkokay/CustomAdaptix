@@ -13,10 +13,10 @@ import (
 type EncodingType string
 
 const (
-	EncodingBase64   EncodingType = "base64"
-	EncodingJSON     EncodingType = "json"
-	EncodingBinary   EncodingType = "binary"
-	EncodingHex      EncodingType = "hex"
+	EncodingBase64 EncodingType = "base64"
+	EncodingJSON   EncodingType = "json"
+	EncodingBinary EncodingType = "binary"
+	EncodingHex    EncodingType = "hex"
 )
 
 // EncoderDecoder handles different encoding/decoding formats
