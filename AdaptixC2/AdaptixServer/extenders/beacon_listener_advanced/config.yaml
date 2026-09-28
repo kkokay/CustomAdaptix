@@ -1,0 +1,7 @@
+extender_type: "listener"
+extender_file: "listener_beacon_advanced.so"
+ax_file: "ax_config.axs"
+
+listener_name: "BeaconAdvanced"
+listener_type: "external"
+protocol: "http"
