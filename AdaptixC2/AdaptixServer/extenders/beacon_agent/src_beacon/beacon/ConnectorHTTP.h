@@ -112,6 +112,7 @@ class ConnectorHTTP : public Connector
 	// Encryption support (RC4 or ChaCha20)
 	BYTE   encryption_method = ENC_RC4;  // Default: RC4 for compatibility
 	BYTE   chacha20_nonce[12] = {0};     // Nonce for ChaCha20 (12 bytes)
+	BYTE   chacha20_hmac_key[32] = {0};  // HMAC key derived from encryption key
 
 public:
 	ConnectorHTTP();
