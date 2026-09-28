@@ -76,6 +76,9 @@ func (p *PluginListener) Create(name string, config string, customData []byte) (
 		conf.Protocol = "http"
 
 		// Set defaults
+		if conf.EncryptKey == "" {
+			conf.EncryptKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+		}
 		if conf.EncryptionMethod == "" {
 			conf.EncryptionMethod = "chacha20poly1305"
 		}
@@ -86,6 +89,16 @@ func (p *PluginListener) Create(name string, config string, customData []byte) (
 	} else {
 		if err = json.Unmarshal(customData, &conf); err != nil {
 			return nil, listenerData, customdData, err
+		}
+		// Set defaults from customData too
+		if conf.EncryptKey == "" {
+			conf.EncryptKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+		}
+		if conf.EncryptionMethod == "" {
+			conf.EncryptionMethod = "chacha20poly1305"
+		}
+		if conf.EncodingMethod == "" {
+			conf.EncodingMethod = "base64"
 		}
 	}
 
