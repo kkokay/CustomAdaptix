@@ -62,9 +62,9 @@ type TransportConfig struct {
 	HostHeader     []string `json:"host_header"`
 	RequestHeaders string   `json:"request_headers"`
 
-	// Encoding & Encryption
-	EncryptionMethod string `json:"encryption_method"` // "chacha20poly1305" or "rc4"
-	EncodingMethod   string `json:"encoding_method"`   // "base64", "json", "hex", "binary"
+	// NOTE: Encoding & Encryption are hardcoded in listeners:
+	// - Encryption: ChaCha20-Poly1305 (AEAD, RFC 7539)
+	// - Encoding: Base64
 
 	// Server response
 	ResponseHeaders    map[string]string `json:"response_headers"`
@@ -201,12 +201,8 @@ func (t *TransportHTTP) Start(ts Teamserver) error {
 		return fmt.Errorf("crypto initialization failed: %v", err)
 	}
 
-	// Initialize encoder
-	encodingMethod := t.Config.EncodingMethod
-	if encodingMethod == "" {
-		encodingMethod = "base64" // default
-	}
-	t.Encoder, err = NewEncoderDecoder(encodingMethod, t.Crypto)
+	// Initialize encoder (hardcoded to base64 for this listener)
+	t.Encoder, err = NewEncoderDecoder("base64", t.Crypto)
 	if err != nil {
 		return fmt.Errorf("encoder initialization failed: %v", err)
 	}
@@ -236,9 +232,8 @@ func (t *TransportHTTP) Start(ts Teamserver) error {
 	}
 
 	if t.Config.Ssl {
-		fmt.Printf("   Started listener '%s': https://%s:%d (Encryption: %s, Encoding: %s)\n",
-			t.Name, t.Config.HostBind, t.Config.PortBind,
-			t.Config.EncryptionMethod, t.Config.EncodingMethod)
+		fmt.Printf("   Started listener '%s': https://%s:%d (Encryption: chacha20poly1305, Encoding: base64)\n",
+			t.Name, t.Config.HostBind, t.Config.PortBind)
 
 		listenerPath := ListenerDataDir + "/" + t.Name
 		if _, err := os.Stat(listenerPath); os.IsNotExist(err) {
@@ -293,9 +288,8 @@ func (t *TransportHTTP) Start(ts Teamserver) error {
 		}()
 
 	} else {
-		fmt.Printf("   Started listener '%s': http://%s:%d (Encryption: %s, Encoding: %s)\n",
-			t.Name, t.Config.HostBind, t.Config.PortBind,
-			t.Config.EncryptionMethod, t.Config.EncodingMethod)
+		fmt.Printf("   Started listener '%s': http://%s:%d (Encryption: chacha20poly1305, Encoding: base64)\n",
+			t.Name, t.Config.HostBind, t.Config.PortBind)
 
 		go func() {
 			err := t.Server.ListenAndServe()
